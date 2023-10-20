@@ -165,6 +165,7 @@ fn standard_form(n: f64) -> String {
 }
 
 use circular_queue::CircularQueue;
+use rand::Rng;
 
 struct Visualiser {
     window: Window,
@@ -200,7 +201,7 @@ impl Layer for Visualiser {
     }
 
     fn tick(&mut self, bodies: &mut [Body], _: f64) -> Option<Vec<Event>> {
-        if (Instant::now() - self.last_run).as_secs_f32() < 1.0/60.0 { println!("Skipping"); return None; }
+        if (Instant::now() - self.last_run).as_secs_f32() < 1.0/60.0 { return None; }
         self.last_run = Instant::now();
         
         self.paths
@@ -245,6 +246,8 @@ impl Layer for Visualiser {
 }
 
 fn main() {
+    let mut rng = rand::thread_rng();
+
     let earth = Body {
         mass: 5.972e24,
         position: DVec3::ZERO,
@@ -261,14 +264,24 @@ fn main() {
     };
 
     let mut system = System::new();
-    let earth = system.add(earth);
-    let moon = system.add(moon);
+    
+    for _ in 0..5 {
+        system.add(Body {
+            mass: rng.gen::<f64>() * 1e24,
+            position: DVec3::new(rng.gen(), rng.gen(), rng.gen()) * 1e9,
+            velocity: DVec3::new(rng.gen::<f64>() - 0.5, rng.gen::<f64>() - 0.5, rng.gen::<f64>() - 0.5) * 1e3
+        });
+    }
+
+    /*let earth = system.add(earth);
+    system.add(moon);
+    system.add_layer(Box::new(Anchor { anchor: earth }));*/
+
     system.add_layer(Box::new(GravityLayer {}));
     system.add_layer(Box::new(EnergyLogger {}));
     system.add_layer(Box::new(Visualiser::new("FYZX")));
-    system.add_layer(Box::new(Anchor { anchor: earth }));
 
     system.setup();
 
-    while system.tick(1.0) {}
+    while system.tick(10.0) {}
 }
